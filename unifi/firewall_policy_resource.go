@@ -3,12 +3,14 @@ package unifi
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/ubiquiti-community/go-unifi/unifi"
@@ -125,7 +127,7 @@ func (r *firewallPolicyResource) Schema(
 				Description: "IP version: IPV4, IPV6, or BOTH.",
 				Computed:    true,
 				Optional:    true,
-				Default:     stringplanmodifier.StaticValue("IPV4"),
+				Default:     stringdefault.StaticString("IPV4"),
 			},
 			"logging_enabled": schema.BoolAttribute{
 				Description: "Whether to log matching traffic.",
@@ -164,7 +166,7 @@ func (r *firewallPolicyResource) Create(
 
 	site := data.Site.ValueString()
 	if site == "" {
-		site = r.client.site
+		site = r.client.Site
 	}
 
 	// Build source filter
@@ -241,7 +243,7 @@ func (r *firewallPolicyResource) Create(
 		policy.Description = data.Description.ValueString()
 	}
 
-	result, err := r.client.unifi.CreateFirewallPolicy(ctx, site, policy)
+	result, err := r.client.ApiClient.CreateFirewallPolicy(ctx, site, policy)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to create firewall policy",
@@ -270,7 +272,7 @@ func (r *firewallPolicyResource) Read(
 		return
 	}
 
-	policies, err := r.client.unifi.ListFirewallPolicy(ctx, data.Site.ValueString())
+	policies, err := r.client.ApiClient.ListFirewallPolicy(ctx, data.Site.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to read firewall policies",
@@ -411,7 +413,7 @@ func (r *firewallPolicyResource) Update(
 		policy.Description = data.Description.ValueString()
 	}
 
-	_, err := r.client.unifi.UpdateFirewallPolicy(ctx, site, policy)
+	_, err := r.client.ApiClient.UpdateFirewallPolicy(ctx, site, policy)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to update firewall policy",
@@ -437,7 +439,7 @@ func (r *firewallPolicyResource) Delete(
 		return
 	}
 
-	err := r.client.unifi.DeleteFirewallPolicy(ctx, data.Site.ValueString(), data.ID.ValueString())
+	err := r.client.ApiClient.DeleteFirewallPolicy(ctx, data.Site.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to delete firewall policy",
@@ -452,7 +454,7 @@ func (r *firewallPolicyResource) ImportState(
 	req resource.ImportStateRequest,
 	resp *resource.ImportStateResponse,
 ) {
-	parts := parseImportID(req.ID)
+	parts := strings.Split(req.ID, ",")
 	if len(parts) != 2 {
 		resp.Diagnostics.AddError(
 			"Error importing firewall policy",
@@ -464,6 +466,6 @@ func (r *firewallPolicyResource) ImportState(
 	siteID := parts[0]
 	policyID := parts[1]
 
-	resp.State.SetAttribute(ctx, path.Root("id"), policyID)
-	resp.State.SetAttribute(ctx, path.Root("site"), siteID)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), policyID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("site"), siteID)...)
 }
