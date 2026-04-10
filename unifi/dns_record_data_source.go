@@ -134,7 +134,7 @@ func (d *dnsRecordDataSource) Read(
 
 	var dnsRecord *unifi.DNSRecord
 	for _, record := range dnsRecords {
-		if (name == "" && record.HiddenID == "default") || record.Key == name {
+		if (name == "" && record.HiddenID == "default") || record.Domain == name {
 			dnsRecord = &record
 			break
 		}
@@ -148,13 +148,35 @@ func (d *dnsRecordDataSource) Read(
 		return
 	}
 
+	// Map UniFi API type to Terraform record type
+	typeMapping := map[string]string{
+		"A_RECORD":     "A",
+		"AAAA_RECORD":  "AAAA",
+		"CNAME_RECORD": "CNAME",
+		"MX_RECORD":    "MX",
+		"TXT_RECORD":   "TXT",
+		"SRV_RECORD":   "SRV",
+		"PTR_RECORD":   "PTR",
+	}
+
 	data.ID = types.StringValue(dnsRecord.ID)
 	data.Site = types.StringValue(site)
-	data.Name = types.StringValue(dnsRecord.Key)
-	data.Type = types.StringValue(dnsRecord.RecordType)
-	data.Value = types.StringValue(dnsRecord.Value)
-	data.TTL = types.Int64Value(dnsRecord.Ttl)
+	data.Name = types.StringValue(dnsRecord.Domain)
+	data.Type = types.StringValue(typeMapping[dnsRecord.Type])
 	data.Enabled = types.BoolValue(dnsRecord.Enabled)
+
+	// Set the appropriate value field based on record type
+	switch dnsRecord.Type {
+	case "A_RECORD":
+		data.Value = types.StringValue(dnsRecord.IPv4Address)
+	case "AAAA_RECORD":
+		data.Value = types.StringValue(dnsRecord.IPv6Address)
+	default:
+		// For CNAME, MX, PTR, TXT, SRV, use TargetDomain
+		data.Value = types.StringValue(dnsRecord.TargetDomain)
+	}
+
+	data.TTL = types.Int64Value(dnsRecord.TTLSeconds)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

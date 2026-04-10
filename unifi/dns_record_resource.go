@@ -383,31 +383,48 @@ func (r *dnsRecordFrameworkResource) modelToDNSRecord(
 	_ context.Context,
 	model *dnsRecordFrameworkResourceModel,
 ) *unifi.DNSRecord {
+	recordType := model.RecordType.ValueString()
+	if recordType == "" {
+		recordType = "A"
+	}
+
+	// Map Terraform record type to UniFi API type
+	typeMapping := map[string]string{
+		"A":     "A_RECORD",
+		"AAAA":  "AAAA_RECORD",
+		"CNAME": "CNAME_RECORD",
+		"MX":    "MX_RECORD",
+		"TXT":   "TXT_RECORD",
+		"SRV":   "SRV_RECORD",
+		"PTR":   "PTR_RECORD",
+	}
+
 	dnsRecord := &unifi.DNSRecord{
-		Key:   model.Name.ValueString(),
-		Value: model.Value.ValueString(),
+		Domain:     model.Name.ValueString(),
+		Enabled:    model.Enabled.ValueBool(),
+		Type:       typeMapping[recordType],
+		TTLSeconds: model.TTL.ValueInt64(),
+	}
+
+	// Set the appropriate address field based on record type
+	switch recordType {
+	case "A":
+		dnsRecord.IPv4Address = model.Value.ValueString()
+	case "AAAA":
+		dnsRecord.IPv6Address = model.Value.ValueString()
+	case "CNAME", "MX", "PTR":
+		dnsRecord.TargetDomain = model.Value.ValueString()
+	case "TXT", "SRV":
+		// For TXT and SRV, use TargetDomain as a fallback for the value
+		dnsRecord.TargetDomain = model.Value.ValueString()
 	}
 
 	if !model.Enabled.IsNull() {
 		dnsRecord.Enabled = model.Enabled.ValueBool()
 	}
 
-	dnsRecord.Port = model.Port.ValueInt64Pointer()
-
-	if !model.Priority.IsNull() {
-		dnsRecord.Priority = model.Priority.ValueInt64()
-	}
-
-	if !model.RecordType.IsNull() {
-		dnsRecord.RecordType = model.RecordType.ValueString()
-	}
-
 	if !model.TTL.IsNull() {
-		dnsRecord.Ttl = model.TTL.ValueInt64()
-	}
-
-	if !model.Weight.IsNull() {
-		dnsRecord.Weight = model.Weight.ValueInt64()
+		dnsRecord.TTLSeconds = model.TTL.ValueInt64()
 	}
 
 	return dnsRecord
@@ -422,38 +439,45 @@ func (r *dnsRecordFrameworkResource) dnsRecordToModel(
 ) {
 	model.ID = types.StringValue(dnsRecord.ID)
 	model.Site = types.StringValue(site)
-	model.Name = types.StringValue(dnsRecord.Key)
-	model.Value = types.StringValue(dnsRecord.Value)
-
+	model.Name = types.StringValue(dnsRecord.Domain)
 	model.Enabled = types.BoolValue(dnsRecord.Enabled)
 
-	if dnsRecord.Port != nil && *dnsRecord.Port != 0 {
-		model.Port = types.Int64PointerValue(dnsRecord.Port)
-	} else {
-		model.Port = types.Int64Null()
+	// Map UniFi API type to Terraform record type
+	typeMapping := map[string]string{
+		"A_RECORD":     "A",
+		"AAAA_RECORD":  "AAAA",
+		"CNAME_RECORD": "CNAME",
+		"MX_RECORD":    "MX",
+		"TXT_RECORD":   "TXT",
+		"SRV_RECORD":   "SRV",
+		"PTR_RECORD":   "PTR",
 	}
 
-	if dnsRecord.Priority != 0 {
-		model.Priority = types.Int64Value(dnsRecord.Priority)
-	} else {
-		model.Priority = types.Int64Null()
-	}
-
-	if dnsRecord.RecordType != "" {
-		model.RecordType = types.StringValue(dnsRecord.RecordType)
+	if dnsRecord.Type != "" {
+		model.RecordType = types.StringValue(typeMapping[dnsRecord.Type])
 	} else {
 		model.RecordType = types.StringNull()
 	}
 
-	if dnsRecord.Ttl != 0 {
-		model.TTL = types.Int64Value(dnsRecord.Ttl)
+	// Set the appropriate value field based on record type
+	switch dnsRecord.Type {
+	case "A_RECORD":
+		model.Value = types.StringValue(dnsRecord.IPv4Address)
+	case "AAAA_RECORD":
+		model.Value = types.StringValue(dnsRecord.IPv6Address)
+	default:
+		// For CNAME, MX, PTR, TXT, SRV, use TargetDomain
+		model.Value = types.StringValue(dnsRecord.TargetDomain)
+	}
+
+	if dnsRecord.TTLSeconds != 0 {
+		model.TTL = types.Int64Value(dnsRecord.TTLSeconds)
 	} else {
 		model.TTL = types.Int64Null()
 	}
 
-	if dnsRecord.Weight != 0 {
-		model.Weight = types.Int64Value(dnsRecord.Weight)
-	} else {
-		model.Weight = types.Int64Null()
-	}
+	// Port, Priority, and Weight are not supported in the new API
+	model.Port = types.Int64Null()
+	model.Priority = types.Int64Null()
+	model.Weight = types.Int64Null()
 }
