@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/ubiquiti-community/go-unifi/unifi"
+	"github.com/svilendotorg/go-unifi-api-integration-v1/unifi"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/ubiquiti-community/go-unifi/unifi"
+	"github.com/svilendotorg/go-unifi-api-integration-v1/unifi"
 )
 
 // MergeResourceData merges planned changes with existing API data

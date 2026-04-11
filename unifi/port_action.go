@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/action/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	ui "github.com/ubiquiti-community/go-unifi/unifi"
+	ui "github.com/svilendotorg/go-unifi-api-integration-v1/unifi"
 )
 
 // Ensure the implementation satisfies framework interfaces.

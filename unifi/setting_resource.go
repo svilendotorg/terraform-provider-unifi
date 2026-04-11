@@ -19,8 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	ui "github.com/ubiquiti-community/go-unifi/unifi"
-	"github.com/ubiquiti-community/go-unifi/unifi/settings"
+	ui "github.com/svilendotorg/go-unifi-api-integration-v1/unifi"
+	"github.com/svilendotorg/go-unifi-api-integration-v1/unifi/settings"
 )
 
 var (

@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	ui "github.com/ubiquiti-community/go-unifi/unifi"
+	ui "github.com/svilendotorg/go-unifi-api-integration-v1/unifi"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.

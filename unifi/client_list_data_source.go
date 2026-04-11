@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	gounifi "github.com/ubiquiti-community/go-unifi/unifi"
+	gounifi "github.com/svilendotorg/go-unifi-api-integration-v1/unifi"
 	"github.com/ubiquiti-community/terraform-provider-unifi/unifi/util"
 )
 

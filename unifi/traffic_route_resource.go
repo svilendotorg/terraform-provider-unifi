@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/ubiquiti-community/go-unifi/unifi"
+	"github.com/svilendotorg/go-unifi-api-integration-v1/unifi"
 	"github.com/ubiquiti-community/terraform-provider-unifi/unifi/util"
 )
 
