@@ -14,7 +14,24 @@ It is not recommended to use your own account for management of your controller.
 Terraform is recommended. You can create a **Limited Admin** with **Local Access Only** and
 provide that information for authentication. Two-factor authentication is not supported in the provider.
 
-## Example Usage
+> **Important**: For firewall policy resources, the API key must have **Full Access** or **System Administrator** permissions. Limited keys will work for DNS records but fail for firewall operations.
+
+## Example Usage (if using OpenTofu, which supports variables in the provider section)
+* API Key is required for unifi_dns_record and unifi_firewall_policy resources
+* Username/password only works with legacy resources (like unifi_firewall_rule, unifi_network, etc.)
+* [!IMPORTANT]
+Although ***site*** is NOT mandatory in the provider config - it's marked as Optional: true.
+However, there's a catch:
+If not set, it defaults to "default" (the site name)
+For integration/v1 resources (DNS records, firewall policies), "default" returns 400 error because the API requires UUID
+For legacy resources, "default" works fine
+So while site is optional in the schema, you effectively need to set it to the site UUID if you're using integration/v1 resources.
+The provider doesn't auto-resolve site names to UUIDs.
+
+  Options:
+  - Set site to UUID in provider config
+  - Set UNIFI_SITE env var to UUID
+  - Set site attribute individually on each integration/v1 resource (overrides provider default)
 
 ```terraform
 provider "unifi" {
@@ -28,7 +45,8 @@ provider "unifi" {
   allow_insecure = var.insecure # optionally use UNIFI_INSECURE env var
 
   # if you are not configuring the default site, you can change the site
-  # site = "foo" or optionally use UNIFI_SITE env var
+  # Use site UUID for integration/v1 API resources (DNS records, firewall policies)
+  # site = "<your-site-uuid>" or optionally use UNIFI_SITE env var
 }
 ```
 
@@ -36,12 +54,12 @@ provider "unifi" {
 ## Schema
 
 ### Optional
-
 - `allow_insecure` (Boolean) Skip verification of TLS certificates of API requests. You may need to set this to `true` if you are using your local API without setting up a signed certificate. Can be specified with the `UNIFI_INSECURE` environment variable. Ignored when `cloud_connector` is enabled.
 - `api_key` (String, Sensitive) API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the `username` and `password` fields are ignored.
 - `api_url` (String) URL of the controller API. Can be specified with the `UNIFI_API` environment variable. You should **NOT** supply the path (`/api`), the SDK will discover the appropriate paths. This is to support UDM Pro style API paths as well as more standard controller paths.
 - `cloud_connector` (Boolean) Use UniFi Cloud Connector API to access the controller. When enabled, requires `api_key` authentication and automatically routes requests through https://api.ui.com. Can be specified with the `UNIFI_CLOUD_CONNECTOR` environment variable. The `api_url` field is ignored when this is enabled.
 - `hardware_id` (String) Hardware ID of the UniFi console to connect to when using Cloud Connector. If not specified, defaults to the first console where owner=true. Can be specified with the `UNIFI_HARDWARE_ID` environment variable. Only used when `cloud_connector` is enabled.
 - `password` (String, Sensitive) Password for the user accessing the API. Can be specified with the `UNIFI_PASSWORD` environment variable.
-- `site` (String) The site in the Unifi controller this provider will manage. Can be specified with the `UNIFI_SITE` environment variable. Default: `default`
+- `site` (String) The site in the Unifi controller this provider will manage. Can be specified with the `UNIFI_SITE` environment variable. Default: `default`. **For integration/v1 API resources (DNS records, firewall policies), use the site UUID instead of the site name.**
+- `username` (String, Sensitive) Local user name for the Unifi controller API. Can be specified with the `UNIFI_USERNAME` environment variable.
 - `username` (String, Sensitive) Local user name for the Unifi controller API. Can be specified with the `UNIFI_USERNAME` environment variable.

@@ -9,7 +9,7 @@ This guide provides comprehensive instructions for developing resources in the t
 - **Repository**: [terraform-provider-unifi](https://github.com/ubiquiti-community/terraform-provider-unifi)
 - **Framework**: Terraform Plugin Framework v1.12+
 - **Go Version**: 1.22+
-- **API Client**: [go-unifi](https://github.com/ubiquiti-community/go-unifi)
+- **API Client**: [go-unifi](https://github.com/svilendotorg/go-unifi-api-integration-v1)
 
 ## Key Documentation References
 
@@ -934,4 +934,4 @@ import (
 
 - [Plugin Framework Documentation](https://developer.hashicorp.com/terraform/plugin/framework)
 - [Framework Testing](https://developer.hashicorp.com/terraform/plugin/framework/testing)
-- [go-unifi API Client](https://github.com/ubiquiti-community/go-unifi)
+- [go-unifi API Client](https://github.com/svilendotorg/go-unifi-api-integration-v1)

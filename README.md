@@ -38,9 +38,10 @@ terraform {
 }
 
 provider "unifi" {
-  api_url        = "https://192.168.1.1" # enter your UniFi controller IP
-  api_key        = "your_api_key"        # see below for how to generate
-  allow_insecure = true                  # set to false if you have valid SSL cert
+  api_url        = "https://192.168.1.1"  # enter your UniFi controller IP
+  api_key        = "your_api_key"         # see below for how to generate
+  allow_insecure = true                   # set to false if you have valid SSL cert
+  site           = "<your-site-uuid>"     # use site UUID for integration/v1 API
 }
 
 # DNS Record
@@ -49,33 +50,33 @@ resource "unifi_dns_record" "example" {
   value       = "192.168.1.100"
   record_type = "A"
   ttl         = 300
-  site        = "default"  # or use site UUID
+  enabled     = true  # required by integration/v1 API
 }
 
-# Firewall Policy
+# Firewall Policy (Zone-to-Zone)
 resource "unifi_firewall_policy" "allow-internal" {
-  name        = "Allow Internal Traffic"
-  enabled     = true
-  site        = "your_site_uuid"  # site UUID required for firewall policies
-  
-  action = {
-    type                 = "ALLOW"
-    allow_return_traffic = true
-  }
-  
-  source = {
-    zone_id = "zone_uuid"  # Internal zone
-  }
-  
-  destination = {
-    zone_id = "zone_uuid"  # Internal zone
-  }
-  
-  ip_protocol_scope = {
-    ip_version = "IPV4"
-  }
-  
-  logging_enabled = false
+  name                = "Allow Internal Traffic"
+  enabled             = true
+  action              = "ALLOW"
+  allow_return_traffic = true
+  source_zone_id      = "<internal-zone-uuid>"  # Replace with your Internal zone UUID
+  destination_zone_id = "<internal-zone-uuid>"  # Replace with your Internal zone UUID
+  ip_version          = "IPV4"
+  logging_enabled     = false
+}
+
+# Firewall Policy (IP-to-IP)
+resource "unifi_firewall_policy" "allow-specific" {
+  name                = "Allow Specific IPs"
+  enabled             = true
+  action              = "ALLOW"
+  allow_return_traffic = true
+  source_zone_id      = "<internal-zone-uuid>"
+  source_ips          = ["192.168.1.100", "192.168.1.101"]
+  destination_zone_id = "<internal-zone-uuid>"
+  destination_ips     = ["192.168.1.200"]
+  ip_version          = "IPV4"
+  logging_enabled     = true
 }
 ```
 
@@ -84,9 +85,8 @@ resource "unifi_firewall_policy" "allow-internal" {
 #### API Key Generation
 
 1. Navigate to: `https://<unifi-controller-ip>/network/default/integrations`
-2. Click **"Create New Key"** or **"Add API Key"**
-3. Give it a name (e.g., "Terraform")
-4. Select **"Full Access"** or **"System Administrator"** permissions
+2. Click **"Create New Api Key"** ***NB: The permissions of the user will be inherited for the API Key***
+3. Set Name, Description and Expiry
 5. Click **"Create"** and copy the API key immediately (you won't see it again)
 6. Store it securely in your Terraform variables or environment
 
@@ -94,23 +94,24 @@ resource "unifi_firewall_policy" "allow-internal" {
 
 #### Site Parameter
 
-The `site` parameter can be either:
-- **Site name**: `"default"` (case-sensitive, matches the site name in UniFi UI)
-- **Site UUID**: `"xxxxxxxx-xxx-xxx-xxx-xxxxxxxxxxxx"` (more reliable)
+The `site` parameter in the provider config should use the **site UUID** for integration/v1 API resources:
+- **Site UUID**: `"<your-site-uuid>"` (required for DNS records and firewall policies)
+- **Site name**: `"default"` (may work for some resources but UUID is recommended)
 
 **Finding your site UUID**:
 ```bash
 curl -k -s "https://<controller>/proxy/network/integration/v1/sites" \
-  -H "X-API-KEY: your_api_key" | jq '.data[] | {name, id}'
+  -H "X-API-KEY: <your-api-key>" | jq '.data[] | {name, id}'
 ```
-
-**Recommendation**: Use site UUIDs for firewall policies, site names work fine for DNS records.
 
 **Finding your zone IDs**:
 ```bash
-curl -k -s "https://<controller>/proxy/network/integration/v1/sites/<site-id>/firewall/zones" \
-  -H "X-API-KEY: your_api_key" | jq '.data[] | {name, id}'
+curl -k -s "https://<controller>/proxy/network/integration/v1/sites/<site-uuid>/firewall/zones" \
+  -H "X-API-KEY: <your-api-key>" | jq '.data[] | {name, id}'
 ```
+
+**Recommendation**: Always use site UUIDs to avoid `400 BAD_REQUEST: 'default' is not a valid 'siteId' value` errors.
+
 
 **Note**: Zone UUIDs are typically the same across all UniFi controllers, but verify with the command above.
 
@@ -153,14 +154,12 @@ Tested on UCG Ultra.
 ## Documentation
 
 - **Provider Docs**: https://registry.terraform.io/providers/svilendotorg/unifi/latest/docs
-- **API Documentation**: [[unifi-api-management]] (local Obsidian vault)
-- **Go SDK**: https://github.com/svilendotorg/go-unifi-api-integration-v1
 
 ## Development
 
-This provider uses the [go-unifi-api-integration-v1](https://github.com/svilendotorg/go-unifi-api-integration-v1) SDK fork.
+- **Go SDK** : this provider uses the [go-unifi-api-integration-v1](https://github.com/svilendotorg/go-unifi-api-integration-v1) SDK fork, containing fixes for UniFi Network API
 
-Functionality first needs to be added to the go-unifi SDK before it can be used in the provider.
+- Functionality must be added to the go-unifi SDK before it can be used in the provider.
 
 ## License
 

@@ -7,7 +7,9 @@ description: |-
 
 # Dns Record (Resource)
 
-Manages DNS record settings for different providers.
+Manages DNS records using the integration/v1 API (UniFi Network API 9.x+).
+
+> **Important**: This resource uses the `integration/v1` API endpoints and requires UniFi Network API 9.x+. The `enabled` field is required by the API.
 
 ## Example Usage
 
@@ -15,10 +17,21 @@ Manages DNS record settings for different providers.
 resource "unifi_dns_record" "test" {
   name        = "test-record.example.com"
   enabled     = true
-  priority    = 10
   record_type = "A"
   ttl         = 300
   value       = "192.168.1.100"
+}
+
+# SRV record with port and priority
+resource "unifi_dns_record" "srv" {
+  name        = "_ldap._tcp.example.com"
+  enabled     = true
+  record_type = "SRV"
+  priority    = 10
+  weight      = 5
+  port        = 389
+  value       = "ldap.example.com"
+  ttl         = 300
 }
 ```
 
@@ -32,14 +45,20 @@ resource "unifi_dns_record" "test" {
 
 ### Optional
 
-- `enabled` (Boolean) Whether the DNS record is enabled.
-- `port` (Number) The port of the DNS record.
-- `priority` (Number) The priority of the DNS record.
-- `record_type` (String) The type of the DNS record.
-- `site` (String) The name of the site to associate the DNS record with.
-- `ttl` (Number) The TTL of the DNS record.
-- `weight` (Number) The weight of the DNS record.
+- `enabled` (Boolean) Whether the DNS record is enabled. **Required by the API.**
+- `port` (Number) The port of the DNS record (for SRV records).
+- `priority` (Number) The priority of the DNS record (for SRV records).
+- `record_type` (String) The type of the DNS record: `A`, `AAAA`, `CNAME`, `SRV`, etc.
+- `site` (String) The site UUID to associate the DNS record with. **Use UUID for integration/v1 API compatibility.**
+- `ttl` (Number) The TTL of the DNS record in seconds.
+- `weight` (Number) The weight of the DNS record (for SRV records).
 
 ### Read-Only
 
 - `id` (String) The ID of the DNS record.
+
+## Notes
+
+- The `enabled` field must be set to `true` for the DNS record to be created.
+- Use site UUID (e.g., `98f7af54-38f8-306a-a2c7-c9349732b1f6`) instead of site name for compatibility with the integration/v1 API.
+- Supported record types: `A`, `AAAA`, `CNAME`, `SRV`, and others supported by the UniFi controller.
