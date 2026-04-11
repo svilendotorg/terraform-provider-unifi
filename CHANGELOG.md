@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.41.29] - 2026-04-11
+
+### 📄 Documentation Updates
+
+#### New `unifi_firewall_policy` Resource Documentation
+
+* **Added**: `docs/resources/firewall_policy.md` - comprehensive documentation for the `unifi_firewall_policy` resource
+  * Prerequisites section with API key generation instructions
+  * Site UUID and zone ID lookup commands
+  * Multiple usage examples: zone-to-zone, IP-to-IP, and block policies
+  * Full schema reference (required, optional, read-only attributes)
+  * Import syntax with examples
+  * Notes about auto-created return policies
+
+#### Updated `unifi_dns_record` Documentation
+
+* **Updated**: `docs/resources/dns_record.md`
+  * Clarified that `enabled` field is **required by the API**
+  * Added note about using site UUID for integration/v1 API compatibility
+  * Added SRV record example with port and priority
+
+#### Provider Configuration Documentation
+
+* **Updated**: `docs/index.md`
+  * Added warning about API key permissions (Full Access required for firewall policies)
+  * Clarified that `site` parameter should use UUID for integration/v1 resources
+
+#### README Examples Fixed
+
+* **Updated**: `README.md`
+  * Fixed `unifi_firewall_policy` examples to use correct flat attribute syntax
+  * Added IP-to-IP firewall policy example
+  * Added zone ID lookup command
+  * Masked all UUIDs with placeholders (`<your-site-uuid>`, `<internal-zone-uuid>`)
+
+**Full Changelog**: https://github.com/svilendotorg/terraform-provider-unifi/compare/v0.41.28...v0.41.29
+
+---
+
 ## [v0.41.20] - 2026-03-08
 
 ### 💥 Breaking Changes

@@ -146,6 +146,7 @@ Tested on UCG Ultra.
 
 | Version | Changes |
 |---------|---------|
+| v0.41.29 | Firewall policy resource documentation, fixed examples |
 | v0.41.28 | Firewall policy integration/v1 API support |
 | v0.41.27 | Bug fixes and updates |
 | v0.41.26 | DNS record integration/v1 API support |
