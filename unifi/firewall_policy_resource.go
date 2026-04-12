@@ -243,7 +243,7 @@ func (r *firewallPolicyResource) Create(
 		policy.Description = data.Description.ValueString()
 	}
 
-	result, err := r.client.ApiClient.CreateFirewallPolicy(ctx, site, policy)
+	_, err := r.client.ApiClient.CreateFirewallPolicy(ctx, site, policy)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to create firewall policy",
@@ -252,7 +252,35 @@ func (r *firewallPolicyResource) Create(
 		return
 	}
 
-	data.ID = types.StringValue(result.ID)
+	// API doesn't return ID on create, fetch it by listing policies
+	var policies []unifi.FirewallPolicy
+	policies, err = r.client.ApiClient.ListFirewallPolicy(ctx, site)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to fetch firewall policy ID",
+			fmt.Sprintf("Could not list firewall policies after creation: %s", err),
+		)
+		return
+	}
+
+	// Find the policy by name
+	var found *unifi.FirewallPolicy
+	for _, p := range policies {
+		if p.Name == data.Name.ValueString() && p.ID != "" {
+			found = &p
+			break
+		}
+	}
+
+	if found == nil {
+		resp.Diagnostics.AddError(
+			"Firewall policy created but not found",
+			"Policy was created but could not be retrieved to get its ID",
+		)
+		return
+	}
+
+	data.ID = types.StringValue(found.ID)
 	data.Site = types.StringValue(site)
 
 	diag = resp.State.Set(ctx, data)

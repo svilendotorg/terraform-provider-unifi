@@ -18,12 +18,17 @@ You can't configure your network while connected to something that may disconnec
 |----------|-------------------|----------------|---------|
 | DNS Records | `v2/api/site/{site}/static-dns` (404) | `integration/v1/sites/{site}/dns/policies` | v0.41.26+ |
 | Firewall Policies | `v2/api/site/{site}/firewall-policies` | `integration/v1/sites/{site}/firewall/policies` | v0.41.28+ |
+| Firewall Policies (full CRUD) | - | JSON parsing fixes | v0.41.29+ |
 
 ### Why This Fork?
 
 The original provider uses deprecated API endpoints that return 404 errors on UniFi Network API 9.x+. This fork updates to the new `integration/v1` API endpoints.
 
 ## Quick Start
+
+### Unifi
+- It's recommended to create new local **Super Admin** user in https://api_url/network/default/admins/users (lower permission user doesn't work)
+- Login with the user Create new Api Key in https://unifi.svilen.org/network/default/integrations/api-key/new
 
 ### Terraform
 
@@ -32,7 +37,7 @@ terraform {
   required_providers {
     unifi = {
       source  = "svilendotorg/unifi"
-      version = "0.41.28"
+      version = "0.41.29"
     }
   }
 }
@@ -124,7 +129,7 @@ terraform {
   required_providers {
     unifi = {
       source  = "svilendotorg/unifi"
-      version = "0.41.28"
+      version = "0.41.29"
     }
   }
 }
@@ -146,11 +151,16 @@ Tested on UCG Ultra.
 
 | Version | Changes |
 |---------|---------|
-| v0.41.29 | Firewall policy resource documentation, fixed examples |
-| v0.41.28 | Firewall policy integration/v1 API support |
+| v0.41.29 | **Firewall policy full CRUD support** - Fixed JSON parsing (ID field, list wrapper, ConnectionStateFilter) |
+| v0.41.28 | Firewall policy integration/v1 API support (create only, no ID capture) |
 | v0.41.27 | Bug fixes and updates |
 | v0.41.26 | DNS record integration/v1 API support |
 | v0.41.25 | Base fork version |
+
+### Known Issues (v0.41.28 and earlier)
+
+- **Firewall policy delete fails with 405**: The ID was not captured after creation, causing delete to fail
+- **Fix**: Use v0.41.29+ with SDK v1.33.51+ for full CRUD support
 
 ## Documentation
 

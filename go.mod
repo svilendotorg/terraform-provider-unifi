@@ -280,3 +280,5 @@ require (
 )
 
 tool github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+
+replace github.com/svilendotorg/go-unifi-api-integration-v1 => /Users/svilen/CODE/Personal/public-projects/go-unifi-api-integration-v1
