@@ -1,52 +1,114 @@
 ---
-page_title: "Unifi Provider"
+page_title: "UniFi Provider"
 description: |-
-  The UniFi provider is used to interact with UniFi Controller resources. The provider needs to be configured with the proper credentials before it can be used.
+  The UniFi provider is used to interact with UniFi Controller resources.
 ---
 
-# Unifi Provider
+# UniFi Provider
 
-The UniFi provider is used to interact with UniFi Controller resources. The provider needs to be configured with the proper credentials before it can be used.
+The UniFi provider is used to interact with UniFi Controller resources. This fork includes fixes for UniFi Network API 9.x+ compatibility.
 
-The Unifi provider provides resources to interact with a Unifi controller API.
+> **Note**: This project is developed and tested for **direct connection** mode only. Cloud Connector mode is not tested and its functionality is unknown.
 
-It is not recommended to use your own account for management of your controller. A user specific to
-Terraform is recommended. You can create a **Limited Admin** with **Local Access Only** and
-provide that information for authentication. Two-factor authentication is not supported in the provider.
+## Authentication
+
+### API Key (Required for integration/v1 resources)
+
+For `unifi_dns_record` and `unifi_firewall_policy` resources, you **must** use an API key:
+
+1. Navigate to `https://<controller>/network/default/integrations`
+2. Create a new API key with **Full Access** permissions (required for firewall policies)
+3. Store the key securely in your Terraform variables or environment
+
+### Username/Password (Legacy resources only)
+
+Username/password authentication only works with legacy resources like `unifi_firewall_rule`, `unifi_network`, etc. It does **not** work with integration/v1 API resources.
 
 > **Important**: For firewall policy resources, the API key must have **Full Access** or **System Administrator** permissions. Limited keys will work for DNS records but fail for firewall operations.
 
-## Example Usage (if using OpenTofu, which supports variables in the provider section)
-* API Key is required for unifi_dns_record and unifi_firewall_policy resources
-* Username/password only works with legacy resources (like unifi_firewall_rule, unifi_network, etc.)
-* [!IMPORTANT]
-Although ***site*** is NOT mandatory in the provider config - it's marked as Optional: true.
-However, there's a catch:
-If not set, it defaults to "default" (the site name)
-For integration/v1 resources (DNS records, firewall policies), "default" returns 400 error because the API requires UUID
-For legacy resources, "default" works fine
-So while site is optional in the schema, you effectively need to set it to the site UUID if you're using integration/v1 resources.
-The provider doesn't auto-resolve site names to UUIDs.
+> **Note**: Two-factor authentication (2FA) is **not supported** by this provider. Use API keys for authentication.
 
-  Options:
-  - Set site to UUID in provider config
-  - Set UNIFI_SITE env var to UUID
-  - Set site attribute individually on each integration/v1 resource (overrides provider default)
+## Connection Modes
+
+### Direct Connection (Default)
+
+Specify your controller's URL:
+```terraform
+provider "unifi" {
+  api_url = "https://192.168.1.1"  # Required for direct connection
+  api_key = var.unifi_api_key
+}
+```
+
+### Cloud Connector Mode (Untested)
+
+> **Warning**: Cloud Connector mode has not been tested and its functionality is unknown.
 
 ```terraform
 provider "unifi" {
-  username = var.username # optionally use UNIFI_USERNAME env var
-  password = var.password # optionally use UNIFI_PASSWORD env var
-  api_url  = var.api_url  # optionally use UNIFI_API env var
-  api_key  = var.api_key  # optionally use UNIFI_API_KEY
+  api_key        = var.unifi_api_key
+  cloud_connector = true
+}
+```
+This automatically routes requests through `https://api.ui.com` (not tested).
 
-  # you may need to allow insecure TLS communications unless you have configured
-  # certificates for your controller
-  allow_insecure = var.insecure # optionally use UNIFI_INSECURE env var
+## Site Configuration
 
-  # if you are not configuring the default site, you can change the site
-  # Use site UUID for integration/v1 API resources (DNS records, firewall policies)
-  # site = "<your-site-uuid>" or optionally use UNIFI_SITE env var
+The `site` parameter defaults to `"default"` (the site name). However:
+
+- **Legacy resources**: Site name `"default"` works fine
+- **integration/v1 resources** (DNS records, firewall policies): Requires site **UUID**, not name
+
+To find your site UUID:
+```bash
+curl -k -s "https://<controller>/proxy/network/integration/v1/sites" \
+  -H "X-API-KEY: <your-api-key>" | jq '.data[] | {name, id}'
+```
+
+You can set the site UUID via:
+- Provider config: `site = "<your-site-uuid>"`
+- Environment variable: `UNIFI_SITE="<your-site-uuid>"`
+- Individual resource: `site = "<your-site-uuid>"` (overrides provider default)
+
+## Example Usage
+
+```terraform
+terraform {
+  required_providers {
+    unifi = {
+      source  = "svilendotorg/unifi"
+      version = "0.41.29"
+    }
+  }
+}
+
+provider "unifi" {
+  # API key authentication (required for integration/v1 resources)
+  api_key        = var.unifi_api_key
+  api_url        = "https://192.168.1.1"
+  allow_insecure = true
+  site           = "<your-site-uuid>"  # Use UUID for DNS/firewall policies
+}
+
+# DNS Record (integration/v1 API)
+resource "unifi_dns_record" "example" {
+  name        = "example.local"
+  value       = "192.168.1.100"
+  record_type = "A"
+  ttl         = 300
+  enabled     = true  # Required by integration/v1 API
+}
+
+# Firewall Policy (integration/v1 API)
+resource "unifi_firewall_policy" "allow-internal" {
+  name                = "Allow Internal Traffic"
+  enabled             = true
+  action              = "ALLOW"
+  allow_return_traffic = true
+  source_zone_id      = "<internal-zone-uuid>"
+  destination_zone_id = "<internal-zone-uuid>"
+  ip_version          = "IPV4"
+  logging_enabled     = false
 }
 ```
 
@@ -54,12 +116,21 @@ provider "unifi" {
 ## Schema
 
 ### Optional
+
 - `allow_insecure` (Boolean) Skip verification of TLS certificates of API requests. You may need to set this to `true` if you are using your local API without setting up a signed certificate. Can be specified with the `UNIFI_INSECURE` environment variable. Ignored when `cloud_connector` is enabled.
 - `api_key` (String, Sensitive) API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the `username` and `password` fields are ignored.
-- `api_url` (String) URL of the controller API. Can be specified with the `UNIFI_API` environment variable. You should **NOT** supply the path (`/api`), the SDK will discover the appropriate paths. This is to support UDM Pro style API paths as well as more standard controller paths.
+- `api_url` (String) URL of the controller API. Can be specified with the `UNIFI_API` environment variable. You should **NOT** supply the path (`/api`), the SDK will discover the appropriate paths. This is to support UDM Pro style API paths as well as more standard controller paths. **Required unless `cloud_connector` is enabled.**
 - `cloud_connector` (Boolean) Use UniFi Cloud Connector API to access the controller. When enabled, requires `api_key` authentication and automatically routes requests through https://api.ui.com. Can be specified with the `UNIFI_CLOUD_CONNECTOR` environment variable. The `api_url` field is ignored when this is enabled.
 - `hardware_id` (String) Hardware ID of the UniFi console to connect to when using Cloud Connector. If not specified, defaults to the first console where owner=true. Can be specified with the `UNIFI_HARDWARE_ID` environment variable. Only used when `cloud_connector` is enabled.
 - `password` (String, Sensitive) Password for the user accessing the API. Can be specified with the `UNIFI_PASSWORD` environment variable.
 - `site` (String) The site in the Unifi controller this provider will manage. Can be specified with the `UNIFI_SITE` environment variable. Default: `default`. **For integration/v1 API resources (DNS records, firewall policies), use the site UUID instead of the site name.**
 - `username` (String, Sensitive) Local user name for the Unifi controller API. Can be specified with the `UNIFI_USERNAME` environment variable.
-- `username` (String, Sensitive) Local user name for the Unifi controller API. Can be specified with the `UNIFI_USERNAME` environment variable.
+
+## Resource Compatibility
+
+| Resource | API Version | Status | Notes |
+|----------|-------------|--------|-------|
+| `unifi_dns_record` | integration/v1 | ✅ Works | Requires API key and site UUID |
+| `unifi_firewall_policy` | integration/v1 | ✅ Works | v0.41.29+, requires API key with Full Access |
+| `unifi_firewall_rule` | Legacy | ⚠️ Broken | Does not persist on UniFi OS 9.x+ |
+| Other resources | Legacy | ⚠️ Varies | May require username/password auth |

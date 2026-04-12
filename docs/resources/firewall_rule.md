@@ -9,6 +9,12 @@ description: |-
 
 Manages an individual firewall rule on the gateway.
 
+> **⚠️ WARNING: Legacy Resource - Does Not Work on UniFi OS 9.x+**
+>
+> This resource uses the legacy `firewallrule` API endpoint which does not persist rules on UniFi Network API 9.x+.
+>
+> **Use `unifi_firewall_policy` instead** for UniFi OS 9.x+ compatibility. See [unifi_firewall_policy](firewall_policy.md) documentation.
+
 ## Example Usage
 
 ```terraform

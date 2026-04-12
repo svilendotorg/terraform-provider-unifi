@@ -10,6 +10,10 @@ Terraform provider for managing UniFi Network devices. This fork includes critic
 
 You can't configure your network while connected to something that may disconnect (like WiFi). Use a hard-wired connection to your controller when using this provider.
 
+> **Note**: This project is developed and tested for **direct connection** mode only. Cloud Connector mode is not tested and its functionality is unknown.
+
+> **Note**: Two-factor authentication (2FA) is **not supported** by this provider. Use API keys for authentication.
+
 ## Key Differences from Original
 
 ### Fixed Resources (Network API 9.x+)
@@ -26,11 +30,19 @@ The original provider uses deprecated API endpoints that return 404 errors on Un
 
 ## Quick Start
 
-### Unifi
-- It's recommended to create new local **Super Admin** user in https://api_url/network/default/admins/users (lower permission user doesn't work)
-- Login with the user Create new Api Key in https://unifi.svilen.org/network/default/integrations/api-key/new
+### UniFi Setup
 
-### Terraform
+1. **Create Super Admin User**: It's recommended to create a new local **Super Admin** user at `https://<controller>/network/default/admins/users` (lower permission users don't work)
+2. **Create API Key**: Login with the user and create a new API key at `https://<controller>/network/default/integrations/api-key/new` with **Full Access** permissions
+3. **Find Site UUID**: Run the following to get your site UUID:
+   ```bash
+   curl -k -s "https://<controller>/proxy/network/integration/v1/sites" \
+     -H "X-API-KEY: <your-api-key>" | jq '.data[] | {name, id}'
+   ```
+
+### Terraform / OpenTofu
+
+This provider works with both Terraform and OpenTofu:
 
 ```hcl
 terraform {
@@ -49,7 +61,7 @@ provider "unifi" {
   site           = "<your-site-uuid>"     # use site UUID for integration/v1 API
 }
 
-# DNS Record
+# DNS Record (works with both Terraform and OpenTofu)
 resource "unifi_dns_record" "example" {
   name        = "example.something.lan"
   value       = "192.168.1.100"
@@ -85,55 +97,32 @@ resource "unifi_firewall_policy" "allow-specific" {
 }
 ```
 
-### Configuration Details
-
-#### API Key Generation
+### API Key Generation
 
 1. Navigate to: `https://<unifi-controller-ip>/network/default/integrations`
-2. Click **"Create New Api Key"** ***NB: The permissions of the user will be inherited for the API Key***
+2. Click **"Create New Api Key"** - *The permissions of the user will be inherited for the API Key*
 3. Set Name, Description and Expiry
-5. Click **"Create"** and copy the API key immediately (you won't see it again)
-6. Store it securely in your Terraform variables or environment
+4. Click **"Create"** and copy the API key immediately (you won't see it again)
+5. Store it securely in your Terraform variables or environment
 
 **Important**: For firewall policies, the API key must have **Full Access** permissions. Limited keys will work for DNS records but fail for firewall operations.
 
-#### Site Parameter
+### Finding Site UUID and Zone IDs
 
-The `site` parameter in the provider config should use the **site UUID** for integration/v1 API resources:
-- **Site UUID**: `"<your-site-uuid>"` (required for DNS records and firewall policies)
-- **Site name**: `"default"` (may work for some resources but UUID is recommended)
+The `site` parameter in the provider config should use the **site UUID** for integration/v1 API resources (DNS records, firewall policies).
 
-**Finding your site UUID**:
+**Commands to get UUIDs**:
 ```bash
+# Get site UUID
 curl -k -s "https://<controller>/proxy/network/integration/v1/sites" \
   -H "X-API-KEY: <your-api-key>" | jq '.data[] | {name, id}'
-```
 
-**Finding your zone IDs**:
-```bash
+# Get zone IDs (replace <site-uuid> with your site UUID)
 curl -k -s "https://<controller>/proxy/network/integration/v1/sites/<site-uuid>/firewall/zones" \
   -H "X-API-KEY: <your-api-key>" | jq '.data[] | {name, id}'
 ```
 
-**Recommendation**: Always use site UUIDs to avoid `400 BAD_REQUEST: 'default' is not a valid 'siteId' value` errors.
-
-
-**Note**: Zone UUIDs are typically the same across all UniFi controllers, but verify with the command above.
-
-### OpenTofu
-
-This provider also works with OpenTofu:
-
-```hcl
-terraform {
-  required_providers {
-    unifi = {
-      source  = "svilendotorg/unifi"
-      version = "0.41.29"
-    }
-  }
-}
-```
+Always use the UUIDs from your specific controller.
 
 ## Registry Locations
 
